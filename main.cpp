@@ -35,6 +35,7 @@ int main()
 		std::cout << "=============================================" << std::endl;
 
 		double current_obj;
+		//double current_obj = current.solve_RMP(duals);
 
 		// Column Generation
 		bool col_gen_term = false;
@@ -50,6 +51,8 @@ int main()
 
 			current_obj = current.solve_RMP(duals);
 		}
+		if (col_gen_term)
+			current_obj = current.solve_RMP(duals);
 
 		std::cout << "\n[LP BOUND] Objective value (relaxation): " << current_obj << std::endl;
 
@@ -86,17 +89,13 @@ int main()
 		if (fractional && (current_obj < best_obj))
 		{
 			// branching
-			bnp::RMP left;
-			left.model = current.model;
-			left.patterns = current.patterns;
+			bnp::RMP left(current);
 			left.model.lp_.col_lower_[branch_var] = 0.0;
 			left.model.lp_.col_upper_[branch_var] = floor(branch_value);
 			left.highs.passModel(left.model);
 			node_stack.push(move(left));
 
-			bnp::RMP right;
-			right.model = current.model;
-			right.patterns = current.patterns;
+			bnp::RMP right(current);
 			right.model.lp_.col_lower_[branch_var] = ceil(branch_value);
 			right.model.lp_.col_upper_[branch_var] = 1.0e30;
 			right.highs.passModel(right.model);

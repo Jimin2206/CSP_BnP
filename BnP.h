@@ -17,8 +17,9 @@ namespace bnp
 
 		RMP();
 		~RMP();
-		RMP(RMP&& other) noexcept;                  // 이동 생성자
-		RMP& operator=(RMP&& other) noexcept;       // 이동 대입 연산자
+		RMP(const RMP& other);                // 이동 생성자
+		RMP& operator=(const RMP& other);  // 이동 대입 연산자
+		void copy_patterns_from(const RMP& other);
 
 		void initialize();
 		double solve_RMP(vector<double>& duals);

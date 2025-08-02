@@ -12,6 +12,7 @@ namespace bnp
 	RMP::RMP()
 	{
 		model.lp_.sense_ = ObjSense::kMinimize;
+		highs.setOptionValue("output_flag", false);
 	}
 
 	RMP::~RMP()
@@ -22,25 +23,40 @@ namespace bnp
 		}
 	}
 
-	// 이동 생성자
-	RMP::RMP(RMP&& other) noexcept
+	// 복사 생성자
+	RMP::RMP(const RMP& other)
 	{
-		model = std::move(other.model);
-		patterns = std::move(other.patterns);
-		highs.passModel(model);  // 새로 모델 전달
+		model = other.model;
+		highs.passModel(model);  // HiGHS는 반드시 모델 전달 필요
+		copy_patterns_from(other);
 	}
 
-	// 이동 대입 연산자
-	RMP& RMP::operator=(RMP&& other) noexcept
+	RMP& RMP::operator=(const RMP& other)
 	{
 		if (this != &other) {
-			model = std::move(other.model);
-			patterns = std::move(other.patterns);
-			//Highs highs;            // 새로 초기화
-			highs.passModel(model);       // 새 모델 전달
+			model = other.model;
+			highs.passModel(model);
+			copy_patterns_from(other);
 		}
 		return *this;
 	}
+
+
+	void RMP::copy_patterns_from(const RMP& other) {
+		// 기존 패턴 삭제
+		for (auto p : patterns)
+			delete[] p;
+		patterns.clear();
+
+		// 새 패턴 복사
+		for (auto src : other.patterns) {
+			int* dst = new int[ProblemData::nL];
+			for (int i = 0; i < ProblemData::nL; ++i)
+				dst[i] = src[i];
+			patterns.push_back(dst);
+		}
+	}
+
 
 	void RMP::initialize()
 	{
@@ -86,7 +102,7 @@ namespace bnp
 				{
 					Aindex.push_back(i);
 					Avalue.push_back(patterns[p][i]);
-					nnz;
+					nnz++;
 				}
 			}
 		}
@@ -116,7 +132,12 @@ namespace bnp
 		duals = sol.row_dual;
 		double obj = info.objective_function_value;
 		
-		cout << "[RMP] LP objective: " << obj << endl;
+		/*cout << "[RMP] LP objective: " << obj << endl;
+		cout << "[RMP] duals: " << endl;
+		for (int i = 0; i < duals.size(); ++i)
+		{
+			cout << duals[i] << " ";
+		}*/
 
 		return obj;
 	}
@@ -124,6 +145,7 @@ namespace bnp
 	SP::SP()
 	{
 		SP_model.lp_.sense_ = ObjSense::kMaximize;
+		highs.setOptionValue("output_flag", false);
 	}
 
 	bool SP::solve_SP(RMP& rmp, const vector<double>& duals)
