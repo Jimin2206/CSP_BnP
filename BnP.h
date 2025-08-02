@@ -16,6 +16,10 @@ namespace bnp
 		vector<int*> patterns;
 
 		RMP();
+		~RMP();
+		RMP(RMP&& other) noexcept;                  // 이동 생성자
+		RMP& operator=(RMP&& other) noexcept;       // 이동 대입 연산자
+
 		void initialize();
 		double solve_RMP(vector<double>& duals);
 	};

@@ -23,10 +23,16 @@ int main()
 	stack<bnp::RMP> node_stack;
 	node_stack.push(move(root));
 
+	int node_id = 0; 
+
 	while (!node_stack.empty())
 	{
-		bnp::RMP& current = move(node_stack.top());
+		bnp::RMP current = move(node_stack.top());
 		node_stack.pop();
+
+		std::cout << "\n=============================================" << std::endl;
+		std::cout << "[Node " << node_id++ << "] Processing new node." << std::endl;
+		std::cout << "=============================================" << std::endl;
 
 		double current_obj;
 
@@ -37,9 +43,32 @@ int main()
 		{
 			col_gen_term = sp.solve_SP(current, duals);
 			if (col_gen_term)
+			{
+				std::cout << "[Column Generation] No improving pattern found. Terminated." << std::endl;
 				break;
+			}
 
 			current_obj = current.solve_RMP(duals);
+		}
+
+		std::cout << "\n[LP BOUND] Objective value (relaxation): " << current_obj << std::endl;
+
+		std::cout << "\n[Patterns in this node] Total: " << current.patterns.size() << endl;
+		for (int p = 0; p < current.patterns.size(); ++p)
+		{
+			std::cout << "Pattern " << p << ": [";
+			for (int i = 0; i < ProblemData::nL; ++i)
+			{
+				std::cout << current.patterns[p][i] << " ";
+			}
+			std::cout << "]" << std::endl;
+		}
+
+		auto current_sol = current.highs.getSolution().col_value;
+		std::cout << "\n[LP Solution] Pattern usages:" << std::endl;
+		for (int i = 0; i < current_sol.size(); ++i)
+		{
+			std::cout << "x_" << i << " = " << current_sol[i] << std::endl;
 		}
 
 		// check if the solution is integral
@@ -47,6 +76,13 @@ int main()
 		double branch_value;
 		bool fractional = bnp::has_fractional_solution(current, branch_var, branch_value);
 		
+		std::cout << "\n[Solution Status] Is integer feasible? " << (fractional ? "No" : "Yes") << std::endl;
+
+		if (fractional)
+		{
+			std::cout << "-> Fractional variable: x_" << branch_var << " = " << branch_value << std::endl;
+		}
+
 		if (fractional && (current_obj < best_obj))
 		{
 			// branching
@@ -80,12 +116,12 @@ int main()
 
 	// print result
 	cout << "\n==============================\n";
-	cout << "최소 롤 수: " << best_obj << endl;
+	cout << "minimum number of rolls: " << best_obj << endl;
 	
-	for (int p = 0; best_patterns.size(); ++p)
+	for (int p = 0; p < best_patterns.size(); ++p)
 	{
 		if (best_sol[p] < 1e-6) continue;
-		cout << "패턴 " << p << " (" << best_sol[p] << "번 사용) : [";
+		cout << "Pattern " << p << " (" << best_sol[p] << "times used) : [";
 		for (int i = 0; i < ProblemData::nL; ++i)
 		{
 			cout << best_patterns[p][i] << " ";

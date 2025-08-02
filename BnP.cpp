@@ -14,6 +14,34 @@ namespace bnp
 		model.lp_.sense_ = ObjSense::kMinimize;
 	}
 
+	RMP::~RMP()
+	{
+		for (auto p : patterns)
+		{
+			delete[] p;
+		}
+	}
+
+	// 이동 생성자
+	RMP::RMP(RMP&& other) noexcept
+	{
+		model = std::move(other.model);
+		patterns = std::move(other.patterns);
+		highs.passModel(model);  // 새로 모델 전달
+	}
+
+	// 이동 대입 연산자
+	RMP& RMP::operator=(RMP&& other) noexcept
+	{
+		if (this != &other) {
+			model = std::move(other.model);
+			patterns = std::move(other.patterns);
+			//Highs highs;            // 새로 초기화
+			highs.passModel(model);       // 새 모델 전달
+		}
+		return *this;
+	}
+
 	void RMP::initialize()
 	{
 		int n = ProblemData::nL;
@@ -23,7 +51,7 @@ namespace bnp
 
 		// initial patterns: trivial pattern for each order
 
-		for (int i = 0; i < L; i++)
+		for (int i = 0; i < n; i++)
 		{
 			int* pat = new int[n]();
 			pat[i] = floor(L / ReqL[i]);
@@ -86,7 +114,11 @@ namespace bnp
 		HighsInfo info = highs.getInfo();
 
 		duals = sol.row_dual;
-		return info.objective_function_value;
+		double obj = info.objective_function_value;
+		
+		cout << "[RMP] LP objective: " << obj << endl;
+
+		return obj;
 	}
 
 	SP::SP()
