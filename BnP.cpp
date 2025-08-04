@@ -29,6 +29,7 @@ namespace bnp
 		model = other.model;
 		highs.passModel(model);  // HiGHS는 반드시 모델 전달 필요
 		copy_patterns_from(other);
+		copy_forbidden_patterns_from(other);
 	}
 
 	RMP& RMP::operator=(const RMP& other)
@@ -37,6 +38,7 @@ namespace bnp
 			model = other.model;
 			highs.passModel(model);
 			copy_patterns_from(other);
+			copy_forbidden_patterns_from(other);
 		}
 		return *this;
 	}
@@ -54,6 +56,20 @@ namespace bnp
 			for (int i = 0; i < ProblemData::nL; ++i)
 				dst[i] = src[i];
 			patterns.push_back(dst);
+		}
+	}
+
+	void RMP::copy_forbidden_patterns_from(const RMP& other) {
+		// 기존 forbidden pattern 정리 (혹시 잔재 있을 수 있음)
+		for (auto pat : forbidden_patterns)
+			delete[] pat;
+		forbidden_patterns.clear();
+
+		for (auto pat : other.forbidden_patterns) {
+			int* new_pat = new int[ProblemData::nL];
+			for (int i = 0; i < ProblemData::nL; ++i)
+				new_pat[i] = pat[i];
+			forbidden_patterns.push_back(new_pat);
 		}
 	}
 
@@ -118,8 +134,28 @@ namespace bnp
 
 	double RMP::solve_RMP(vector<double>& duals)
 	{
+		for (auto ele : model.lp_.col_lower_)
+		{
+			cout << ele << "\t";
+		}
+		cout << endl;
+		for (auto ele : model.lp_.col_upper_)
+		{
+			cout << ele << "\t";
+		}
+		cout << endl;
+
 		highs.setOptionValue("output_flag", false);
 		HighsStatus status = highs.run();
+		HighsModelStatus model_status = highs.getModelStatus();
+
+		if (model_status == HighsModelStatus::kInfeasible)
+		{
+			std::cout << "[RMP] Infeasible model detected." << std::endl;
+			duals.assign(ProblemData::nL, 0.0);
+			return std::numeric_limits<double>::infinity();
+		}
+
 		if (status != HighsStatus::kOk)
 		{
 			cerr << "HiGHS failed to solve RMP" << endl;
@@ -212,6 +248,13 @@ namespace bnp
 			pattern[i] = static_cast<int>(sol[i] + 0.5);
 		}
 
+		if (is_forbidden_pattern(pattern, rmp.forbidden_patterns, n))
+		{
+			std::cout << "[sp] forbidden pattern generated. discarded." << std::endl;
+			delete[] pattern;
+			return true;
+		}
+
 		rmp.model.lp_.col_cost_.push_back(1.0);
 		rmp.model.lp_.col_lower_.push_back(0.0);
 		rmp.model.lp_.col_upper_.push_back(1.0e30);
@@ -251,5 +294,24 @@ namespace bnp
 		}
 		return false;
 	}
+
+	bool is_forbidden_pattern(int* new_pat, const vector<int*>& forbidden_patterns, int n)
+	{
+		for (auto pat : forbidden_patterns)
+		{
+			bool same = true;
+			for (int i = 0; i < n; ++i)
+			{
+				if (new_pat[i] != pat[i])
+				{
+					same = false;
+					break;
+				}
+			}
+			if (same) return true;
+		}
+		return false;
+	}
+
 
 }

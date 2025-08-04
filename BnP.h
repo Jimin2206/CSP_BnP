@@ -14,12 +14,14 @@ namespace bnp
 		Highs highs;
 		HighsModel model;
 		vector<int*> patterns;
+		vector<int*> forbidden_patterns;
 
 		RMP();
 		~RMP();
-		RMP(const RMP& other);                // 이동 생성자
-		RMP& operator=(const RMP& other);  // 이동 대입 연산자
+		RMP(const RMP& other);               
+		RMP& operator=(const RMP& other);  
 		void copy_patterns_from(const RMP& other);
+		void RMP::copy_forbidden_patterns_from(const RMP& other);
 
 		void initialize();
 		double solve_RMP(vector<double>& duals);
@@ -36,4 +38,6 @@ namespace bnp
 	};
 
 	bool has_fractional_solution(RMP& rmp, int& branch_var, double& branch_value);
+
+	bool is_forbidden_pattern(int* new_pat, const vector<int*>& forbidden_patterns, int n);
 }

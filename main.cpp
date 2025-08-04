@@ -5,6 +5,7 @@
 #include <stack>
 #include <vector>
 #include <limits>
+#include <algorithm>
 
 using namespace std;
 
@@ -34,8 +35,8 @@ int main()
 		std::cout << "[Node " << node_id++ << "] Processing new node." << std::endl;
 		std::cout << "=============================================" << std::endl;
 
-		double current_obj;
-		//double current_obj = current.solve_RMP(duals);
+		//double current_obj;
+		double current_obj = current.solve_RMP(duals);
 
 		// Column Generation
 		bool col_gen_term = false;
@@ -51,10 +52,16 @@ int main()
 
 			current_obj = current.solve_RMP(duals);
 		}
-		if (col_gen_term)
-			current_obj = current.solve_RMP(duals);
+		/*if (col_gen_term)
+			current_obj = current.solve_RMP(duals);*/
 
 		std::cout << "\n[LP BOUND] Objective value (relaxation): " << current_obj << std::endl;
+
+		if (current_obj >= best_obj)
+		{
+			std::cout << "[Prune] Node pruned by bound (current_obj >= best_obj)." << std::endl;
+			continue;
+		}
 
 		std::cout << "\n[Patterns in this node] Total: " << current.patterns.size() << endl;
 		for (int p = 0; p < current.patterns.size(); ++p)
@@ -90,22 +97,40 @@ int main()
 		{
 			// branching
 			bnp::RMP left(current);
-			left.model.lp_.col_lower_[branch_var] = 0.0;
+			//left.model.lp_.col_lower_[branch_var] = 0.0;
 			left.model.lp_.col_upper_[branch_var] = floor(branch_value);
 			left.highs.passModel(left.model);
+
+			int* forbidden = new int[ProblemData::nL];
+			for (int i = 0; i < ProblemData::nL; ++i)
+				forbidden[i] = current.patterns[branch_var][i];
+			left.forbidden_patterns.push_back(forbidden);
+
 			node_stack.push(move(left));
 
 			bnp::RMP right(current);
 			right.model.lp_.col_lower_[branch_var] = ceil(branch_value);
-			right.model.lp_.col_upper_[branch_var] = 1.0e30;
+			//right.model.lp_.col_upper_[branch_var] = 1.0e30;
 			right.highs.passModel(right.model);
+			right.forbidden_patterns = {};
+			
 			node_stack.push(move(right));
+
 		}
 
 		if (!fractional && (current_obj < best_obj))
 		{
 			best_obj = current_obj;
-			best_patterns = current.patterns;
+			//best_patterns = current.patterns;
+
+			best_patterns.clear();
+			for (auto pat : current.patterns)
+			{
+				int* new_pat = new int[ProblemData::nL];
+				for (int i = 0; i < ProblemData::nL; ++i)
+					new_pat[i] = pat[i];
+				best_patterns.push_back(new_pat);
+			}
 
 			best_sol = current.highs.getSolution().col_value;
 
@@ -120,11 +145,17 @@ int main()
 	for (int p = 0; p < best_patterns.size(); ++p)
 	{
 		if (best_sol[p] < 1e-6) continue;
-		cout << "Pattern " << p << " (" << best_sol[p] << "times used) : [";
+		cout << "Pattern " << p << " (" << best_sol[p] << " times used) : [";
 		for (int i = 0; i < ProblemData::nL; ++i)
 		{
 			cout << best_patterns[p][i] << " ";
 		}
+		cout << "]";
 		cout << endl;
 	}
+
+	for (auto pat : best_patterns)
+		delete[] pat;
+
+	return 0;
 }

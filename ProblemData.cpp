@@ -1,5 +1,10 @@
 #include "ProblemData.h"
 
+//int ProblemData::LL = 100;
+//int ProblemData::nL = 3;
+//int* ProblemData::ReqL = new int[nL] {20, 45, 50};
+//int* ProblemData::b = new int[nL] {4, 5, 3}; 
+
 int ProblemData::LL = 40;
 int ProblemData::nL = 6;
 int* ProblemData::ReqL = new int[nL] {4, 2, 6, 7, 8, 12};
