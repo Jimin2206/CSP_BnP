@@ -97,8 +97,11 @@ int main()
 		{
 			// branching
 			bnp::RMP left(current);
-			//left.model.lp_.col_lower_[branch_var] = 0.0;
+			left.model.lp_.col_lower_[branch_var] = 0.0;
 			left.model.lp_.col_upper_[branch_var] = floor(branch_value);
+			/*left.model.lp_.col_lower_[branch_var] = std::max(left.model.lp_.col_lower_[branch_var], 0.0);
+			left.model.lp_.col_upper_[branch_var] = std::min(left.model.lp_.col_upper_[branch_var], floor(branch_value));*/
+
 			left.highs.passModel(left.model);
 
 			int* forbidden = new int[ProblemData::nL];
@@ -110,7 +113,9 @@ int main()
 
 			bnp::RMP right(current);
 			right.model.lp_.col_lower_[branch_var] = ceil(branch_value);
-			//right.model.lp_.col_upper_[branch_var] = 1.0e30;
+			right.model.lp_.col_upper_[branch_var] = 1.0e30;
+			/*right.model.lp_.col_lower_[branch_var] = std::max(right.model.lp_.col_lower_[branch_var], ceil(branch_value));
+			right.model.lp_.col_upper_[branch_var] = std::min(right.model.lp_.col_upper_[branch_var], 1.0e30);*/
 			right.highs.passModel(right.model);
 			right.forbidden_patterns = {};
 			

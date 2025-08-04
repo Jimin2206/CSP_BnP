@@ -21,6 +21,11 @@ namespace bnp
 		{
 			delete[] p;
 		}
+
+		for (auto p : forbidden_patterns)
+		{
+			delete[] p;
+		}
 	}
 
 	// 복사 생성자
